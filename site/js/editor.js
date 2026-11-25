@@ -2,7 +2,7 @@ import { $, bindInput, message } from "./input.js";
 import { loadDraft, saveFile, saveMask } from "./draft.js";
 import { showText, translate } from "./language.js";
 import { Pixels } from "./pixels.js";
-import { CanvasView } from "./canvas.js";
+import { CanvasView } from "./canvas.js?v=2";
 
 let pixels,
   filename,
