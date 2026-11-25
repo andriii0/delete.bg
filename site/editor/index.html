@@ -13,6 +13,10 @@
         ><span class="brandmark" aria-hidden="true"></span
         ><span>delete<span class="suffix">.bg</span></span></a
       >
+      <select id="language" aria-label="Language">
+        <option value="en" lang="en">EN</option>
+        <option value="ru" lang="ru">RU</option>
+      </select>
       <div class="top-actions">
         <button id="open">Open photo</button
         ><button id="copy" disabled>Copy PNG</button
@@ -100,7 +104,8 @@
         </div>
         <div class="canvas-foot">
           <span id="file-info"></span>
-          <div class="segment zoom" aria-label="Zoom">
+          <div class="segment zoom" aria-label="Zoom" title="Scroll to zoom">
+            <output id="zoom-level" hidden></output>
             <button data-zoom="fit" aria-pressed="true">Fit</button
             ><button data-zoom="1">100%</button
             ><button data-zoom="2">200%</button>

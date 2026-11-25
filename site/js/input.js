@@ -1,6 +1,8 @@
+import { showText } from "./language.js";
+
 export const $ = (id) => document.getElementById(id);
 export function message(text) {
-  $("message").textContent = text;
+  showText($("message"), text);
 }
 
 export function bindInput(open) {

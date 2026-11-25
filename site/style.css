@@ -726,3 +726,45 @@ progress {
     gap: 8px;
   }
 }
+
+#language {
+  margin-left: auto;
+  margin-right: 16px;
+  padding: 6px 3px;
+  color: var(--ink);
+  background: transparent;
+  border: 0;
+  font: inherit;
+  font-size: 13px;
+}
+.editor:has(#studio[hidden]) #language {
+  margin-right: 0;
+}
+#zoom-level {
+  padding-inline: 5px;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 600px) {
+  .editor .bar {
+    flex-wrap: wrap;
+  }
+  .editor #language {
+    margin-right: 0;
+  }
+  .top-actions {
+    margin-left: auto;
+  }
+  .editor fieldset {
+    min-width: 0;
+  }
+  .tools button {
+    min-width: 0;
+  }
+  html[lang="ru"] .editor .tools {
+    grid-template-columns: 1fr;
+  }
+  html[lang="ru"] .modes button {
+    padding-inline: 3px;
+  }
+}

@@ -22,13 +22,32 @@ export class CanvasView {
     v.onpointercancel = v.onlostpointercapture = (e) => {
       if (this.gesture?.id === e.pointerId) this.cancel();
     };
-    v.onwheel = (e) => {
-      if (!this.pixels || this.zoom === "fit") return;
-      e.preventDefault();
-      this.x -= e.deltaX || (e.shiftKey ? e.deltaY : 0);
-      this.y -= e.shiftKey ? 0 : e.deltaY;
-      this.position();
-    };
+    v.addEventListener(
+      "wheel",
+      (e) => {
+        if (!this.pixels || !e.deltaY) return;
+        e.preventDefault();
+        if (this.gesture) return;
+        const unit =
+          e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? v.clientHeight : 1;
+        const delta = Math.max(-360, Math.min(360, e.deltaY * unit));
+        const fit = this.fitScale();
+        const scale = Math.max(
+          Math.min(0.05, fit),
+          Math.min(Math.max(8, fit), this.scale * Math.exp(-delta / 600)),
+        );
+        if (scale === this.scale) return;
+        const point = this.point(e);
+        const x = Math.max(0, Math.min(this.pixels.width, point.x));
+        const y = Math.max(0, Math.min(this.pixels.height, point.y));
+        this.setZoom(
+          String(scale),
+          this.x + x * this.scale,
+          this.y + y * this.scale,
+        );
+      },
+      { passive: false },
+    );
     new ResizeObserver(() => this.resize()).observe(v);
     document.addEventListener("keydown", (e) => {
       if (
@@ -99,31 +118,36 @@ export class CanvasView {
     overlay.height = v.clientHeight;
     if (this.pixels) this.setZoom(this.zoom);
   }
-  setZoom(zoom) {
-    const { width, height } = this.pixels,
-      v = this.viewport;
-    const cx = v.clientWidth / 2,
-      cy = v.clientHeight / 2;
+  fitScale() {
+    return Math.max(
+      0.001,
+      Math.min(
+        (this.viewport.clientWidth - 16) / this.pixels.width,
+        (this.viewport.clientHeight - 16) / this.pixels.height,
+      ),
+    );
+  }
+  setZoom(
+    zoom,
+    cx = this.viewport.clientWidth / 2,
+    cy = this.viewport.clientHeight / 2,
+  ) {
+    const { width, height } = this.pixels;
     const focusX = (cx - this.x) / this.scale,
       focusY = (cy - this.y) / this.scale;
     this.zoom = zoom;
-    this.scale =
-      zoom === "fit"
-        ? Math.max(
-            0.001,
-            Math.min((2 * cx - 16) / width, (2 * cy - 16) / height),
-          )
-        : Number(zoom);
+    this.scale = zoom === "fit" ? this.fitScale() : Number(zoom);
     this.x = cx - (zoom === "fit" ? width / 2 : focusX) * this.scale;
     this.y = cy - (zoom === "fit" ? height / 2 : focusY) * this.scale;
     this.position();
     this.render();
   }
   position() {
-    const clamp = (offset, screen, image) =>
-      image <= screen
-        ? (screen - image) / 2
-        : Math.max(screen - image, Math.min(0, offset));
+    const clamp = (offset, screen, image) => {
+      if (this.zoom === "fit") return (screen - image) / 2;
+      const visible = Math.min(16, screen / 2, image / 2);
+      return Math.max(visible - image, Math.min(screen - visible, offset));
+    };
     this.x = clamp(
       this.x,
       this.viewport.clientWidth,
@@ -145,6 +169,9 @@ export class CanvasView {
     this.render();
   }
   render() {
+    const level = $("zoom-level");
+    level.hidden = ["fit", "1", "2"].includes(this.zoom);
+    level.textContent = Math.round(this.scale * 100) + "%";
     for (const key of ["mode", "tool", "bg", "zoom", "view"])
       for (const el of document.querySelectorAll("[data-" + key + "]"))
         el.setAttribute("aria-pressed", el.dataset[key] === this[key]);

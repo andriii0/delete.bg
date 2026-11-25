@@ -27,6 +27,8 @@ The published site occupies about **42.2 MB**, below the 1 GB site limit. The la
 
 Click anywhere in the upload area, drop a file, or press Ctrl+V. The editor opens the photo and starts processing. The landing page downloads only its UI and a draggable original/cutout preview.
 
+Choose **EN / RU** in the header to switch languages. The browser remembers the choice. Scroll over the photo to zoom around the pointer.
+
 Use **Original / Cutout** to compare at the same zoom and position. **Pan** pans by dragging. The middle mouse button or Space-drag also pans while editing. The checkerboard, white and black swatches change the preview background.
 
 **Erase** edits transparency. **Restore** restores the source pixels and shows a 25% original underneath. Drag the brush for a stroke, outline a freehand selection with the lasso, drag a circle from its centre, or drag between opposite rectangle corners. Release to apply the shape. Escape cancels an unfinished gesture and exits manual editing. Diameter is in source pixels. The preview ring follows that diameter at every zoom.

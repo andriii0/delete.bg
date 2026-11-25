@@ -1,5 +1,6 @@
 import { $, bindInput, message } from "./input.js";
 import { loadDraft, saveFile, saveMask } from "./draft.js";
+import { showText, translate } from "./language.js";
 import { Pixels } from "./pixels.js";
 import { CanvasView } from "./canvas.js";
 
@@ -11,11 +12,9 @@ let pixels,
   blobPromise,
   persist = true;
 const view = new CanvasView(() => stop("Manual editing"), changed);
-const status = (text) => {
-  $("status").textContent = text;
-};
-const mb = (bytes) =>
-  (bytes / 1e6).toLocaleString("en", { maximumFractionDigits: 1 });
+const status = (text) => showText($("status"), text);
+const methodLabel = (kind) =>
+  translate(kind === "product" ? "object" : "portrait & hair");
 function stop(text) {
   request++;
   worker?.terminate();
@@ -63,13 +62,15 @@ async function processPhoto() {
     worker = new Worker(new URL("./worker.js", import.meta.url), {
       type: "module",
     });
-    const failure = (detail) => {
+    const failure = (detail, values) => {
       if (ticket !== request) return;
       stop();
-      status(
-        "Processing failed. " +
-          detail +
-          " Edit manually or choose Apply to retry.",
+      status(() =>
+        [
+          translate("Processing failed."),
+          translate(detail, values),
+          translate("Edit manually or choose Apply to retry."),
+        ].join(" "),
       );
     };
     worker.onerror = (e) =>
@@ -81,38 +82,41 @@ async function processPhoto() {
         bar.hidden = false;
         bar.max = data.total;
         bar.value = data.loaded;
-        status(
-          "Downloading " +
-            data.asset +
-            " · " +
-            mb(data.loaded) +
-            " of " +
-            mb(data.total) +
-            " MB",
+        status(() =>
+          translate("Downloading {asset} · {loaded} of {total} MB", {
+            asset: data.asset,
+            loaded: data.loaded / 1e6,
+            total: data.total / 1e6,
+          }),
         );
       } else if (data.stage === "process") {
         bar.hidden = false;
         bar.removeAttribute("value");
-        status(
-          "Processing on CPU · " +
-            (data.kind === "product" ? "object" : "portrait & hair"),
+        status(() =>
+          translate("Processing on CPU · {method}", {
+            method: methodLabel(data.kind),
+          }),
         );
       } else if (data.stage === "done") {
         stop();
         if (pixels.automatic(data.alpha)) changed();
-        status(
-          "Done · " +
-            (data.method === "product" ? "object" : "portrait & hair"),
+        status(() =>
+          translate("Done · {method}", { method: methodLabel(data.method) }),
         );
-      } else if (data.stage === "error") failure(data.message);
+      } else if (data.stage === "error")
+        failure(data.template ?? data.message, data.values);
     };
     worker.postMessage({ image: bitmap, kind }, [bitmap]);
   } catch (e) {
     bitmap?.close();
     if (ticket === request) {
       stop();
-      status(
-        "Model failed to start. " + e.message + " You can still edit manually.",
+      status(() =>
+        [
+          translate("Model failed to start."),
+          e.message,
+          translate("You can still edit manually."),
+        ].join(" "),
       );
     }
   }

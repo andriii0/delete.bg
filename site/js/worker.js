@@ -18,7 +18,15 @@ self.onmessage = async ({ data: { image, kind } }) => {
     }
     postMessage({ stage: "done", method, ...result }, [result.alpha.buffer]);
   } catch (error) {
-    postMessage({ stage: "error", message: error.message || String(error) });
+    postMessage({
+      stage: "error",
+      message: (error.message || String(error)).replace(
+        /\{(\w+)\}/g,
+        (match, key) => error.values?.[key] ?? match,
+      ),
+      template: error.values ? error.message : undefined,
+      values: error.values,
+    });
   } finally {
     image.close();
   }

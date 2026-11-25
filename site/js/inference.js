@@ -35,14 +35,15 @@ async function assetBytes(model, report) {
   try {
     response = await fetch(url);
   } catch {
-    throw Error(
-      "Could not download " + model.label + ". Check your connection.",
+    throw Object.assign(
+      Error("Could not download {asset}. Check your connection."),
+      { values: { asset: model.label } },
     );
   }
   if (!response.ok)
-    throw Error(
-      "Could not download " + model.label + " (HTTP " + response.status + ").",
-    );
+    throw Object.assign(Error("Could not download {asset} (HTTP {code})."), {
+      values: { asset: model.label, code: String(response.status) },
+    });
   const reader = response.body.getReader();
   const data = new Uint8Array(model.bytes);
   let loaded = 0;
