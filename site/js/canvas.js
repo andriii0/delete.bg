@@ -144,7 +144,6 @@ export class CanvasView {
   }
   position() {
     const clamp = (offset, screen, image) => {
-      if (this.zoom === "fit") return (screen - image) / 2;
       const visible = Math.min(16, screen / 2, image / 2);
       return Math.max(visible - image, Math.min(screen - visible, offset));
     };
