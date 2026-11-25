@@ -1,0 +1,67 @@
+{
+  "browser": "145.0.7632.6",
+  "cpu": "Intel Core i7-13700",
+  "threads": 1,
+  "milliseconds": {
+    "locks-object": [
+      1091,
+      1081,
+      1178
+    ],
+    "locks-portrait": [
+      1249,
+      1203,
+      1210
+    ],
+    "locks-detail": [
+      2655,
+      2758,
+      2976
+    ],
+    "locks-product": [
+      1265,
+      1327,
+      1261
+    ],
+    "wisps-object": [
+      1209,
+      1244,
+      1230
+    ],
+    "wisps-portrait": [
+      1399,
+      1434,
+      1332
+    ],
+    "wisps-detail": [
+      2780,
+      3023,
+      3107
+    ],
+    "wisps-product": [
+      1361,
+      1518,
+      1384
+    ],
+    "flower-object": [
+      1230,
+      1254,
+      1246
+    ],
+    "flower-portrait": [
+      1365,
+      1306,
+      1414
+    ],
+    "flower-detail": [
+      2894,
+      3218,
+      2993
+    ],
+    "flower-product": [
+      1263,
+      1264,
+      1237
+    ]
+  }
+}

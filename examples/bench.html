@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>delete.bg · CPU benchmark</title>
+    <style>
+      body {
+        max-width: 900px;
+        margin: 3rem auto;
+        padding: 0 1rem;
+        background: #f8f7f2;
+        color: #20382c;
+        font: 16px/1.5 system-ui;
+      }
+      button,
+      select {
+        font: inherit;
+        padding: 0.4em;
+      }
+      label {
+        display: inline-block;
+        margin: 0.4em;
+      }
+      output {
+        display: block;
+      }
+      img {
+        max-width: 100%;
+      }
+      a {
+        color: inherit;
+      }
+      li {
+        margin: 0.6em 0;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>CPU edge comparison</h1>
+    <p>
+      Open the exported PNG or inspect identical 240 × 240 crops on white and
+      black.
+    </p>
+    <ul>
+      <li>
+        Dark locs · <a href="locks.jpg">Source</a> ·
+        <a href="locks-export.png">Editor PNG</a> ·
+        <a href="locks-comparison.png">Four methods</a>
+      </li>
+      <li>
+        Fine hair · <a href="wisps.jpg">Source</a> ·
+        <a href="wisps-export.png">Editor PNG</a> ·
+        <a href="wisps-comparison.png">Four methods</a>
+      </li>
+      <li>
+        Gerbera · <a href="flower.jpg">Source</a> ·
+        <a href="flower-export.png">Editor PNG</a> ·
+        <a href="flower-comparison.png">Four methods</a>
+      </li>
+    </ul>
+    <h2>Repeat a measurement</h2>
+    <label
+      >Photograph
+      <select id="photo">
+        <option value="locks">Dark locs</option>
+        <option value="wisps">Fine hair</option>
+        <option value="flower">Gerbera</option>
+      </select></label
+    >
+    <label
+      >Method
+      <select id="method">
+        <option value="object">U²-Netp</option>
+        <option value="portrait">MODNet 672</option>
+        <option value="detail">MODNet 1024 + local alpha</option>
+        <option value="product">U²-Netp + local alpha</option>
+      </select></label
+    >
+    <button id="repeat">Run three times</button
+    ><output id="times" role="status"></output
+    ><a id="download" hidden>Download measured PNG</a>
+    <script type="module">
+      window.run = async (file, kind) => {
+        const source = await createImageBitmap(
+          await (await fetch(file)).blob(),
+        );
+        const canvas = document.createElement("canvas");
+        canvas.width = source.width;
+        canvas.height = source.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(source, 0, 0);
+        const worker = new Worker("../site/js/worker.js", { type: "module" });
+        try {
+          const result = await new Promise((resolve, reject) => {
+            worker.onmessage = ({ data }) => {
+              if (data.stage === "done") resolve(data);
+              if (data.stage === "error") reject(Error(data.message));
+            };
+            worker.onerror = (event) => reject(Error(event.message));
+            worker.postMessage({ image: source, kind }, [source]);
+          });
+          const frame = ctx.getImageData(0, 0, canvas.width, canvas.height);
+          for (let i = 0; i < result.alpha.length; i++)
+            frame.data[i * 4 + 3] *= result.alpha[i] / 255;
+          ctx.putImageData(frame, 0, 0);
+          return { ms: result.ms, png: canvas.toDataURL() };
+        } finally {
+          worker.terminate();
+        }
+      };
+      const button = document.querySelector("#repeat"),
+        times = document.querySelector("#times"),
+        link = document.querySelector("#download");
+      button.onclick = async () => {
+        const photo = document.querySelector("#photo").value,
+          mode = document.querySelector("#method").value;
+        button.disabled = true;
+        link.hidden = true;
+        try {
+          const samples = [];
+          for (let i = 0; i < 3; i++) {
+            times.textContent = "Processing " + (i + 1) + " / 3";
+            const result = await window.run(photo + ".jpg", mode);
+            samples.push(result.ms);
+            link.href = result.png;
+          }
+          times.textContent =
+            samples.join(" / ") +
+            " ms · median " +
+            samples.slice().sort((a, b) => a - b)[1] +
+            " ms";
+          link.download = photo + "-" + mode + ".png";
+          link.hidden = false;
+        } catch (e) {
+          times.textContent = e.message;
+        } finally {
+          button.disabled = false;
+        }
+      };
+    </script>
+  </body>
+</html>
