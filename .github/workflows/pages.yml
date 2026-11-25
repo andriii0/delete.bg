@@ -13,10 +13,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
-      - run: python verify.py
+      - run: python verify.py --release release
+      - run: python tests/browser.py --site release
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: site
+          path: release
   deploy:
     needs: build
     runs-on: ubuntu-latest

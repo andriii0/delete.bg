@@ -8,7 +8,7 @@ Three real photographs, each 1,000 pixels wide, were processed in Chrome for Tes
 | Fine hair, 1000 × 1271 | 1.23 s | 1.40 s | 3.02 s | 1.38 s |
 | Gerbera, 1000 × 1311 | 1.25 s | 1.37 s | 2.99 s | 1.26 s |
 
-MODNet weights are **25,888,640 bytes**. U²-Netp weights are **4,574,861 bytes**. Both use the same 11,210,254-byte WASM runtime and 69,115 bytes of runtime modules. These are file sizes before transport compression. Auto selection on this flower runs both models sequentially, about 4.25 seconds of processing from the two medians.
+MODNet weights are **25,888,640 bytes**. U²-Netp weights are **4,574,861 bytes**. Both use the same 11,210,254-byte WASM runtime and 69,115 bytes of runtime modules. These are file sizes before transport compression. The table and four-method comparison sheets document the alpha-only baseline. The full-size editor downloads include foreground colour correction at uncertain edges. Auto starts with U²-Netp, measures the whole silhouette and compares the two masks when a portrait pass is warranted.
 
 | Photograph | Input | Full-size editor download | Matching crops on white and black |
 | --- | --- | --- | --- |

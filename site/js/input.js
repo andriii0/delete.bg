@@ -30,7 +30,8 @@ export function bindInput(open) {
     e.preventDefault();
     dragDepth = 0;
     target().classList.remove("drag");
-    if (target().contains(e.target)) receive(e.dataTransfer.files[0]);
+    const file = e.dataTransfer.files[0];
+    if (file) receive(file);
   });
   for (const el of [zone, $("viewport")].filter(Boolean)) {
     el.ondragenter = (e) => {

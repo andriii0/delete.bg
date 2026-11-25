@@ -1,7 +1,7 @@
 # delete.bg status
 
-The production site is the `site/` directory. The landing page, direct editor route, CPU inference, alpha editor, local draft and clipboard/download export are implemented. The Pages workflow publishes this directory from the standalone repository's `main` branch.
+The app runs directly from `site/`. The Pages workflow packages it with versioned asset URLs, checks the model hashes and exercises the release in headless Chrome before deployment. Run `python tests/browser.py --browser <executable>` to test locally.
 
-Chrome for Testing 145 and Microsoft Edge 158 on Windows passed the upload, editing, history and PNG export scenarios with GPU acceleration disabled. A Chrome-to-Edge system clipboard round trip preserved every RGBA pixel of the 1,000 × 1,500 dark portrait. The fine-hair export also matched the clipboard image in each browser. Matching includes semi-transparent pixels and composites on black and white.
+Chrome for Testing 145 and Edge 158 on Windows passed the CPU-only browser suite, including older draft migration, separate drafts in duplicate tabs, retry after PNG encoding failure and replacement of a corrupt cached model. In both browsers, the clipboard round trip for the fine-hair portrait matched the downloaded PNG pixel for pixel.
 
-The quality comparison covers three photographs. Difficult low-contrast hair can retain a mottled edge. Auto selection uses framing and can require a manual model override. See the [comparison and reproducible timings](../examples/README.md) and [publication instructions](../README.md#publish-to-github-pages).
+Auto evaluates the general mask first. It can compare a portrait mask for the same subject and retains manual model selection for ambiguous silhouettes. Low-contrast hair and petal shadows can still need manual correction. See the [sample PNGs and baseline timings](../examples/README.md) and [publication instructions](../README.md#publish-to-github-pages).

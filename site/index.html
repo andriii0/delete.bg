@@ -3,8 +3,8 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>delete.bg — Remove photo backgrounds</title>
-    <meta
+    <title data-i18n="delete.bg — Remove photo backgrounds">delete.bg — Remove photo backgrounds</title>
+    <meta data-i18n-content="Remove a photo background on your device. Refine the edges and export a transparent PNG."
       name="description"
       content="Remove a photo background on your device. Refine the edges and export a transparent PNG."
     />
@@ -17,11 +17,11 @@
         ><span class="brandmark" aria-hidden="true"></span
         ><span>delete<span class="suffix">.bg</span></span></a
       >
-      <select id="language" aria-label="Language">
+      <select data-i18n-aria-label="Language" id="language" aria-label="Language">
         <option value="en" lang="en">EN</option>
         <option value="ru" lang="ru">RU</option></select
       ><a class="nav-link" href="editor/"
-        >Editor
+        ><span data-i18n="Editor">Editor</span>
         <svg
           class="ico"
           aria-hidden="true"
@@ -38,8 +38,8 @@
     <main class="home-grid">
       <div class="intro">
         <h1>
-          Remove the<br />
-          background<span class="period">.</span>
+          <span data-i18n="Remove the">Remove the</span><br />
+          <span data-i18n="background">background</span><span class="period">.</span>
         </h1>
         <button id="zone" class="upload">
           <span class="cta"
@@ -54,9 +54,9 @@
               stroke-linejoin="round"
             >
               <path d="M12 16V3m-5 5 5-5 5 5M4 15v5h16v-5" /></svg
-            >Choose a photo</span
+            ><span data-i18n="Choose a photo">Choose a photo</span></span
           ><span class="hint"
-            >Drop an image here or press <kbd>Ctrl+V</kbd></span
+            ><span data-i18n="Drop an image here or press">Drop an image here or press</span> <kbd>Ctrl+V</kbd></span
           >
         </button>
         <button id="paste" class="text-btn paste">
@@ -72,13 +72,13 @@
           >
             <path d="M8 5H5v16h14V5h-3" />
             <rect x="8" y="2" width="8" height="5" rx="1" /></svg
-          >Paste from clipboard
+          ><span data-i18n="Paste from clipboard">Paste from clipboard</span>
         </button>
         <p id="message" role="status"></p>
       </div>
       <figure class="proof">
         <div class="comparison check">
-          <img
+          <img data-i18n-alt="Pink gerbera with its background removed"
             src="assets/after.webp"
             alt="Pink gerbera with its background removed"
           /><img class="source" src="assets/before.webp" alt="" /><span
@@ -96,7 +96,7 @@
                 stroke-linejoin="round"
               >
                 <path d="m9 8-4 4 4 4m6-8 4 4-4 4" /></svg></i></span
-          ><input
+          ><input data-i18n-aria-label="Compare original and cutout"
             type="range"
             class="split"
             min="0"
@@ -105,7 +105,7 @@
             aria-label="Compare original and cutout"
           />
         </div>
-        <figcaption><span>Original</span><span>Cutout</span></figcaption>
+        <figcaption><span data-i18n="Original">Original</span><span data-i18n="Cutout">Cutout</span></figcaption>
       </figure>
     </main>
     <footer class="home-foot">
@@ -122,10 +122,10 @@
         >
           <rect x="5" y="10" width="14" height="11" rx="2" />
           <path d="M8 10V7a4 4 0 0 1 8 0v3" /></svg
-        >Processed on your device.</span
+        ><span data-i18n="Processed on your device.">Processed on your device.</span></span
       >
       <nav>
-        <a href="licenses/">Credits</a
+        <a data-i18n="Credits" href="licenses/">Credits</a
         ><a href="https://github.com/andriii0/delete.bg"
           >GitHub
           <svg

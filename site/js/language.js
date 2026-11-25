@@ -1,4 +1,15 @@
 const russian = {
+  "The inference engine could not process this image.":
+    "Модели не удалось обработать это изображение.",
+  "Asset integrity check failed.":
+    "Скачанный файл повреждён. Повторите загрузку.",
+  "Image too large. Resize to 16 megapixels or less, with neither side over 8192 px.":
+    "Изображение слишком большое. Уменьшите его до 16 мегапикселей и не более 8192 пикселей по каждой стороне.",
+  "Delete saved draft": "Удалить черновик",
+  "Saved draft deleted. This photo will stay in this tab until you close or refresh it.":
+    "Черновик удалён. Фото доступно до закрытия или обновления вкладки.",
+  "Could not delete the draft. Try again or clear this site's browser data.":
+    "Не удалось удалить черновик. Повторите попытку или очистите данные сайта в браузере.",
   "delete.bg — Remove photo backgrounds": "delete.bg — Удаление фона",
   "Remove a photo background on your device. Refine the edges and export a transparent PNG.":
     "Удалите фон на своём устройстве, поправьте края и сохраните прозрачный PNG.",
@@ -142,27 +153,23 @@ export function translate(key, values = {}) {
   });
 }
 
-// Keep the original text nodes so switching languages preserves icons, controls and canvas state.
 const labels = [];
-const walker = document.createTreeWalker(
-  document.documentElement,
-  NodeFilter.SHOW_TEXT,
-);
-while (walker.nextNode()) {
-  const node = walker.currentNode;
-  const key = node.data.trim().replace(/\s+/g, " ");
-  if (!Object.hasOwn(russian, key)) continue;
-  const prefix = node.data.match(/^\s*/)[0],
-    suffix = node.data.match(/\s*$/)[0];
+for (const el of document.querySelectorAll("[data-i18n]")) {
+  const english = el.textContent;
   labels.push(() => {
-    node.data = prefix + translate(key) + suffix;
+    el.textContent = language === "ru" ? translate(el.dataset.i18n) : english;
   });
 }
 for (const attr of ["title", "aria-label", "alt", "content"]) {
-  for (const element of document.querySelectorAll("[" + attr + "]")) {
-    const key = element.getAttribute(attr);
-    if (Object.hasOwn(russian, key))
-      labels.push(() => element.setAttribute(attr, translate(key)));
+  const binding = "data-i18n-" + attr;
+  for (const element of document.querySelectorAll("[" + binding + "]")) {
+    const english = element.getAttribute(attr);
+    labels.push(() =>
+      element.setAttribute(
+        attr,
+        language === "ru" ? translate(element.getAttribute(binding)) : english,
+      ),
+    );
   }
 }
 

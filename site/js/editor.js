@@ -1,8 +1,8 @@
 import { $, bindInput, message } from "./input.js";
-import { loadDraft, saveFile, saveMask } from "./draft.js";
+import { deleteDraft, loadDraft, saveFile, saveEdit } from "./draft.js";
 import { showText, translate } from "./language.js";
 import { Pixels } from "./pixels.js";
-import { CanvasView } from "./canvas.js?v=2";
+import { CanvasView } from "./canvas.js";
 
 let pixels,
   filename,
@@ -10,8 +10,18 @@ let pixels,
   selection = 0,
   request = 0,
   blobPromise,
+  token,
+  processing = false,
   persist = true;
-const view = new CanvasView(() => stop("Manual editing"), changed);
+const view = new CanvasView(
+  () => {
+    const interrupted = processing;
+    stop("Manual editing");
+    return interrupted;
+  },
+  changed,
+  processPhoto,
+);
 const status = (text) => showText($("status"), text);
 const methodLabel = (kind) =>
   translate(kind === "product" ? "object" : "portrait & hair");
@@ -19,6 +29,8 @@ function stop(text) {
   request++;
   worker?.terminate();
   worker = null;
+  processing = false;
+  $("copy").disabled = $("download").disabled = !pixels;
   $("progress").hidden = true;
   if (text) status(text);
 }
@@ -26,20 +38,21 @@ function historyButtons() {
   $("undo").disabled = !pixels?.undo.length;
   $("redo").disabled = !pixels?.redo.length;
 }
-function changed() {
+function changed(edit) {
   blobPromise = null;
   historyButtons();
   if (persist)
-    saveMask(pixels.alpha.slice()).catch(() =>
+    saveEdit(token, pixels, edit.box, Boolean(edit.colors)).catch(() =>
       message("Draft could not be saved. Download your PNG before closing."),
     );
 }
 function history(forward) {
-  if (!pixels) return;
+  if (!(forward ? pixels?.redo.length : pixels?.undo.length)) return;
   view.cancel();
   stop();
-  if (pixels.history(forward)) {
-    changed();
+  const edit = pixels.history(forward);
+  if (edit) {
+    changed(edit);
     status(forward ? "Edit redone" : "Edit undone");
   }
 }
@@ -50,6 +63,8 @@ async function processPhoto() {
   view.cancel();
   stop();
   const ticket = request;
+  processing = true;
+  $("copy").disabled = $("download").disabled = true;
   const kind = $("method").value;
   status("Preparing model…");
   let bitmap;
@@ -73,8 +88,7 @@ async function processPhoto() {
         ].join(" "),
       );
     };
-    worker.onerror = (e) =>
-      failure(e.message || "The processing worker could not load.");
+    worker.onerror = () => failure("The processing worker could not load.");
     worker.onmessage = ({ data }) => {
       if (ticket !== request) return;
       const bar = $("progress");
@@ -99,7 +113,8 @@ async function processPhoto() {
         );
       } else if (data.stage === "done") {
         stop();
-        if (pixels.automatic(data.alpha)) changed();
+        const edit = pixels.automatic(data.alpha, data.colors);
+        if (edit) changed(edit);
         status(() =>
           translate("Done · {method}", { method: methodLabel(data.method) }),
         );
@@ -114,7 +129,6 @@ async function processPhoto() {
       status(() =>
         [
           translate("Model failed to start."),
-          e.message,
           translate("You can still edit manually."),
         ].join(" "),
       );
@@ -122,7 +136,7 @@ async function processPhoto() {
   }
 }
 $("run").onclick = processPhoto;
-async function openPhoto(file, saved, restoring = false) {
+async function openPhoto(file, saved) {
   const generation = ++selection;
   let image;
   try {
@@ -134,6 +148,16 @@ async function openPhoto(file, saved, restoring = false) {
   }
   if (generation !== selection) {
     image.close();
+    return;
+  }
+  if (
+    image.width * image.height > 16 * 1024 * 1024 ||
+    Math.max(image.width, image.height) > 8192
+  ) {
+    image.close();
+    message(
+      "Image too large. Resize to 16 megapixels or less, with neither side over 8192 px.",
+    );
     return;
   }
   stop();
@@ -172,8 +196,10 @@ async function openPhoto(file, saved, restoring = false) {
   historyButtons();
   $("method").value = "auto";
   persist = true;
-  if (!restoring) {
-    saveFile(file).catch(() => {
+  token = saved?.token ?? crypto.randomUUID();
+  $("forget").disabled = false;
+  if (!saved) {
+    saveFile(file, token).catch(() => {
       if (generation === selection) {
         persist = false;
         message(
@@ -182,13 +208,36 @@ async function openPhoto(file, saved, restoring = false) {
       }
     });
   }
-  if (saved?.length === pixels.alpha.length) status("Draft restored");
+  if (saved?.tiles?.length || saved?.mask?.length === pixels.alpha.length)
+    status("Draft restored");
   else await processPhoto();
 }
 bindInput((file) => openPhoto(file));
+$("forget").onclick = async () => {
+  persist = false;
+  const generation = selection;
+  try {
+    await deleteDraft();
+    if (generation !== selection) return;
+    $("forget").disabled = true;
+    message(
+      "Saved draft deleted. This photo will stay in this tab until you close or refresh it.",
+    );
+  } catch {
+    message(
+      "Could not delete the draft. Try again or clear this site's browser data.",
+    );
+  }
+};
 function png() {
   if (view.gesture && view.gesture.type !== "pan") return encodePNG();
-  if (!blobPromise) blobPromise = encodePNG();
+  if (!blobPromise) {
+    const pending = encodePNG();
+    pending.catch(() => {
+      if (blobPromise === pending) blobPromise = null;
+    });
+    blobPromise = pending;
+  }
   return blobPromise;
 }
 function encodePNG() {
@@ -200,7 +249,7 @@ function encodePNG() {
   );
 }
 async function copyPNG() {
-  if (!pixels) return;
+  if (!pixels || processing) return;
   try {
     await navigator.clipboard.write([
       new ClipboardItem({ "image/png": png() }),
@@ -238,7 +287,7 @@ window.addEventListener("keydown", (e) => {
 });
 let resumeProcessing = false;
 window.addEventListener("pagehide", () => {
-  resumeProcessing = Boolean(worker);
+  resumeProcessing = processing;
   stop();
 });
 window.addEventListener("pageshow", (event) => {
@@ -251,7 +300,7 @@ if (window.history.state?.photo instanceof File) {
   openPhoto(file);
 } else
   loadDraft()
-    .then(({ file, mask }) => {
-      if (file && selection === 0) openPhoto(file, mask, true);
+    .then((draft) => {
+      if (draft.file && selection === 0) openPhoto(draft.file, draft);
     })
     .catch(() => {});

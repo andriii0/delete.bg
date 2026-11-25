@@ -1,4 +1,3 @@
-// Undo entries store only the changed rectangle. RGB always comes from the source.
 export class Pixels {
   constructor(source, target, saved) {
     this.width = source.width;
@@ -11,7 +10,17 @@ export class Pixels {
     for (let i = 0; i < this.original.length; i++)
       this.original[i] = this.frame.data[4 * i + 3];
     this.alpha =
-      saved?.length === this.original.length ? saved : this.original.slice();
+      saved?.mask?.length === this.original.length
+        ? saved.mask
+        : this.original.slice();
+    for (const { x, y, w, data } of saved?.tiles ?? []) {
+      for (let offset = 0; offset < data.length; offset += w)
+        this.alpha.set(
+          data.subarray(offset, offset + w),
+          (y + offset / w) * this.width + x,
+        );
+    }
+    this.colors = saved?.colors ?? new Uint32Array();
     this.undo = [];
     this.redo = [];
     this.full = { x: 0, y: 0, w: this.width, h: this.height };
@@ -34,10 +43,43 @@ export class Pixels {
       for (let i = end - w; i < end; i++)
         this.frame.data[4 * i + 3] = this.alpha[i];
     }
+    this.drawColors(x, y, w, h);
     this.ctx.putImageData(this.frame, 0, 0, x, y, w, h);
+  }
+  drawColors(x, y, w, h) {
+    const colors = this.colors;
+    const start = y * this.width + x,
+      end = (y + h - 1) * this.width + x + w;
+    let lo = 0,
+      hi = colors.length / 3;
+    while (lo < hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      if (colors[mid * 3] < start) lo = mid + 1;
+      else hi = mid;
+    }
+    for (let j = lo * 3; j < colors.length && colors[j] < end; j += 3) {
+      const i = colors[j],
+        col = i % this.width;
+      if (col < x || col >= x + w) continue;
+      const opacity = this.original[i] ? this.alpha[i] / this.original[i] : 1;
+      for (let c = 0; c < 3; c++) {
+        const source = (colors[j + 1] >>> (8 * c)) & 255;
+        const foreground = (colors[j + 2] >>> (8 * c)) & 255;
+        this.frame.data[i * 4 + c] =
+          source + (1 - opacity) * (foreground - source);
+      }
+    }
+  }
+  setColors(colors) {
+    for (let j = 0; j < this.colors.length; j += 3)
+      for (let c = 0; c < 3; c++)
+        this.frame.data[4 * this.colors[j] + c] =
+          (this.colors[j + 1] >>> (8 * c)) & 255;
+    this.colors = colors;
   }
   begin() {
     this.before = this.alpha.slice();
+    this.beforeColors = this.colors;
     this.dirty = null;
   }
   changed(box) {
@@ -56,6 +98,11 @@ export class Pixels {
   finish(cancel = false) {
     const box = this.dirty,
       before = this.before;
+    const colors =
+      this.beforeColors !== this.colors
+        ? [this.beforeColors, this.colors]
+        : null;
+    this.beforeColors = null;
     this.before = null;
     this.dirty = null;
     if (!before || !box) return false;
@@ -74,13 +121,15 @@ export class Pixels {
         delta[row * w + col] = v;
         if (v) different = true;
       }
-    if (!different) return false;
+    if (!different && !colors) return false;
     this.redo = [];
-    this.undo.push({ box, delta });
-    let bytes = this.undo.reduce((sum, e) => sum + e.delta.length, 0);
+    const bytesUsed =
+      delta.length + (colors?.reduce((n, a) => n + a.byteLength, 0) ?? 0);
+    this.undo.push({ box, delta, colors, bytesUsed });
+    let bytes = this.undo.reduce((sum, e) => sum + e.bytesUsed, 0);
     while (this.undo.length > 1 && bytes > 96 * 1024 * 1024)
-      bytes -= this.undo.shift().delta.length;
-    return true;
+      bytes -= this.undo.shift().bytesUsed;
+    return this.undo.at(-1);
   }
   history(forward) {
     const from = forward ? this.redo : this.undo,
@@ -92,12 +141,14 @@ export class Pixels {
       for (let col = 0; col < w; col++)
         this.alpha[(y + row) * this.width + x + col] ^=
           entry.delta[row * w + col];
+    if (entry.colors) this.setColors(entry.colors[forward ? 1 : 0]);
     this.draw(entry.box);
     to.push(entry);
-    return true;
+    return entry;
   }
-  automatic(matte) {
+  automatic(matte, colors) {
     this.begin();
+    this.setColors(colors ?? new Uint32Array());
     for (let i = 0; i < matte.length; i++)
       this.alpha[i] = (this.original[i] * matte[i]) / 255;
     this.changed(this.full);
@@ -105,7 +156,13 @@ export class Pixels {
   }
   mix(i, coverage, restore) {
     const target = restore ? this.original[i] : 0;
-    this.alpha[i] += coverage * (target - this.alpha[i]);
+    const base = this.before[i];
+    // Round toward the target so successive light strokes can reach either endpoint.
+    // Monotonic updates retain the strongest coverage in this gesture.
+    const amount = Math.ceil(Math.abs(target - base) * coverage);
+    this.alpha[i] = restore
+      ? Math.max(this.alpha[i], base + amount)
+      : Math.min(this.alpha[i], base - amount);
   }
   brush(a, b, diameter, softness, restore) {
     const r = diameter / 2,

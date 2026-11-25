@@ -6,22 +6,40 @@ ort.env.wasm.wasmPaths = vendor.href;
 ort.env.wasm.numThreads = 1;
 ort.env.wasm.proxy = false;
 const models = {
-  portrait: { file: "modnet.onnx", bytes: 25888640 },
-  object: { file: "u2netp.onnx", bytes: 4574861 },
+  portrait: {
+    file: "modnet.onnx",
+    bytes: 25888640,
+    hash: "07c308cf0fc7e6e8b2065a12ed7fc07e1de8febb7dc7839d7b7f15dd66584df9",
+  },
+  object: {
+    file: "u2netp.onnx",
+    bytes: 4574861,
+    hash: "309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8",
+  },
 };
 
 let runtimeReady = false;
 async function assetBytes(model, report) {
   const url = new URL(model.file, vendor).href;
+  const key = url + "?sha256=" + model.hash;
+  const valid = async (data) => {
+    if (data.byteLength !== model.bytes) return false;
+    const hash = new Uint8Array(await crypto.subtle.digest("SHA-256", data));
+    return (
+      Array.from(hash, (b) => b.toString(16).padStart(2, "0")).join("") ===
+      model.hash
+    );
+  };
   let cache;
   try {
     cache = await caches.open("contour-assets-ort1.22-v1");
   } catch {}
   try {
-    const hit = await cache?.match(url);
+    const hit = (await cache?.match(key)) ?? (await cache?.match(url));
     if (hit) {
       const cached = await hit.arrayBuffer();
-      if (cached.byteLength === model.bytes) return cached;
+      if (await valid(cached)) return cached;
+      await cache.delete(key);
       await cache.delete(url);
     }
   } catch {}
@@ -33,7 +51,7 @@ async function assetBytes(model, report) {
   });
   let response;
   try {
-    response = await fetch(url);
+    response = await fetch(key, { cache: "reload" });
   } catch {
     throw Object.assign(
       Error("Could not download {asset}. Check your connection."),
@@ -50,6 +68,8 @@ async function assetBytes(model, report) {
   while (true) {
     const { done, value } = await reader.read();
     if (done) break;
+    if (loaded + value.length > data.length)
+      throw Error("Asset integrity check failed.");
     data.set(value, loaded);
     loaded += value.length;
     report({
@@ -60,16 +80,19 @@ async function assetBytes(model, report) {
     });
   }
   if (loaded !== data.length) throw Error("Model download was incomplete.");
+  if (!(await valid(data))) throw Error("Asset integrity check failed.");
   try {
-    await cache?.put(url, new Response(data));
+    await cache?.put(key, new Response(data));
   } catch {}
   return data.buffer;
 }
 
 function context(width, height) {
-  return new OffscreenCanvas(width, height).getContext("2d", {
+  const ctx = new OffscreenCanvas(width, height).getContext("2d", {
     willReadFrequently: true,
   });
+  ctx.imageSmoothingQuality = "high";
+  return ctx;
 }
 
 export async function infer(image, kind, report = () => {}) {
@@ -84,6 +107,7 @@ export async function infer(image, kind, report = () => {}) {
       {
         file: "ort-wasm-simd-threaded.wasm",
         bytes: 11210254,
+        hash: "71aef04959c5c1b6de461b6538e2058e306610034a85aad2742d0c7fd4533fe4",
         label: "WebAssembly",
       },
       report,
@@ -148,7 +172,7 @@ export async function infer(image, kind, report = () => {}) {
     const pixels = full.getImageData(0, 0, image.width, image.height).data;
     const alpha = new Uint8ClampedArray(image.width * image.height);
     for (let i = 0; i < alpha.length; i++) alpha[i] = pixels[4 * i];
-    let result = alpha;
+    let result = { alpha };
     if (kind === "detail" || kind === "product") {
       full.clearRect(0, 0, image.width, image.height);
       full.drawImage(image, 0, 0);
@@ -159,7 +183,7 @@ export async function infer(image, kind, report = () => {}) {
         image.height,
       );
     }
-    return { alpha: result, ms: Math.round(performance.now() - started) };
+    return { ...result, ms: Math.round(performance.now() - started) };
   } finally {
     await session.release();
   }

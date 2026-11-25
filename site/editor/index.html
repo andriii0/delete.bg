@@ -3,28 +3,28 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>Editor — delete.bg</title>
+    <title data-i18n="Editor — delete.bg">Editor — delete.bg</title>
     <link rel="icon" href="../assets/icon.svg" />
     <link rel="stylesheet" href="../style.css" />
   </head>
   <body class="editor">
     <header class="bar">
-      <a class="brand" href="../" aria-label="delete.bg home"
+      <a data-i18n-aria-label="delete.bg home" class="brand" href="../" aria-label="delete.bg home"
         ><span class="brandmark" aria-hidden="true"></span
         ><span>delete<span class="suffix">.bg</span></span></a
       >
-      <select id="language" aria-label="Language">
+      <select data-i18n-aria-label="Language" id="language" aria-label="Language">
         <option value="en" lang="en">EN</option>
         <option value="ru" lang="ru">RU</option>
       </select>
       <div class="top-actions">
-        <button id="open">Open photo</button
-        ><button id="copy" disabled>Copy PNG</button
-        ><button id="download" class="primary" disabled>Download PNG</button>
+        <button data-i18n="Open photo" id="open">Open photo</button
+        ><button data-i18n="Copy PNG" id="copy" disabled>Copy PNG</button
+        ><button data-i18n="Download PNG" id="download" class="primary" disabled>Download PNG</button>
       </div>
     </header>
     <main id="empty">
-      <h1>Open a photo<span class="period">.</span></h1>
+      <h1><span data-i18n="Open a photo">Open a photo</span><span class="period">.</span></h1>
       <button class="upload" id="zone">
         <span class="cta"
           ><svg
@@ -38,9 +38,9 @@
             stroke-linejoin="round"
           >
             <path d="M12 16V3m-5 5 5-5 5 5M4 15v5h16v-5" /></svg
-          >Choose a photo</span
+          ><span data-i18n="Choose a photo">Choose a photo</span></span
         ><span class="hint"
-          >Drop an image here or press <kbd>Ctrl+V</kbd></span
+          ><span data-i18n="Drop an image here or press">Drop an image here or press</span> <kbd>Ctrl+V</kbd></span
         ></button
       ><button class="text-btn paste" id="empty-paste">
         <svg
@@ -55,18 +55,18 @@
         >
           <path d="M8 5H5v16h14V5h-3" />
           <rect x="8" y="2" width="8" height="5" rx="1" /></svg
-        >Paste from clipboard
+        ><span data-i18n="Paste from clipboard">Paste from clipboard</span>
       </button>
     </main>
     <main id="studio" hidden>
-      <section class="workspace" aria-label="Photo preview">
+      <section data-i18n-aria-label="Photo preview" class="workspace" aria-label="Photo preview">
         <div class="canvas-bar">
-          <div class="segment" aria-label="Compare">
-            <button data-view="original">Original</button
-            ><button data-view="result" aria-pressed="true">Cutout</button>
+          <div data-i18n-aria-label="Compare" class="segment" aria-label="Compare">
+            <button data-i18n="Original" data-view="original">Original</button
+            ><button data-i18n="Cutout" data-view="result" aria-pressed="true">Cutout</button>
           </div>
           <div class="history">
-            <button id="undo" title="Undo (Ctrl+Z)" aria-label="Undo">
+            <button data-i18n-aria-label="Undo" data-i18n-title="Undo (Ctrl+Z)" id="undo" title="Undo (Ctrl+Z)" aria-label="Undo">
               <svg
                 class="ico"
                 aria-hidden="true"
@@ -79,7 +79,7 @@
               >
                 <path d="m9 4-6 6 6 6M4 10h10a6 6 0 0 1 0 12" />
               </svg></button
-            ><button id="redo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">
+            ><button data-i18n-aria-label="Redo" data-i18n-title="Redo (Ctrl+Shift+Z)" id="redo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo">
               <svg
                 class="ico"
                 aria-hidden="true"
@@ -95,7 +95,7 @@
             </button>
           </div>
         </div>
-        <div id="viewport" aria-label="Editing canvas">
+        <div data-i18n-aria-label="Editing canvas" id="viewport" tabindex="0" aria-label="Editing canvas">
           <div id="stage" class="check">
             <canvas id="original"></canvas><canvas id="result"></canvas>
           </div>
@@ -104,22 +104,22 @@
         </div>
         <div class="canvas-foot">
           <span id="file-info"></span>
-          <div class="segment zoom" aria-label="Zoom" title="Scroll to zoom">
+          <div data-i18n-aria-label="Zoom" data-i18n-title="Scroll to zoom" class="segment zoom" aria-label="Zoom" title="Scroll to zoom">
             <output id="zoom-level" hidden></output>
-            <button data-zoom="fit" aria-pressed="true">Fit</button
+            <button data-i18n="Fit" data-zoom="fit" aria-pressed="true">Fit</button
             ><button data-zoom="1">100%</button
             ><button data-zoom="2">200%</button>
           </div>
         </div>
       </section>
-      <aside aria-label="Editing tools">
+      <aside data-i18n-aria-label="Editing tools" aria-label="Editing tools">
         <fieldset class="manual">
-          <legend>Retouch</legend>
+          <legend data-i18n="Retouch">Retouch</legend>
           <div class="segment modes">
-            <button id="pan" title="Pan the photo" aria-pressed="true">
+            <button data-i18n-title="Pan the photo" data-i18n="Pan" id="pan" title="Pan the photo" aria-pressed="true">
               Pan</button
-            ><button data-mode="erase">Erase</button
-            ><button data-mode="restore">Restore</button>
+            ><button data-i18n="Erase" data-mode="erase">Erase</button
+            ><button data-i18n="Restore" data-mode="restore">Restore</button>
           </div>
           <div class="tools">
             <button data-tool="brush" aria-pressed="true">
@@ -136,7 +136,7 @@
                 <path
                   d="m10 14 8-10c2-2 4 0 2 2l-8 10M10 14c-4-2-5 1-5 3s-2 3-2 3c4 2 10-1 9-4z"
                 /></svg
-              >Brush</button
+              ><span data-i18n="Brush">Brush</span></button
             ><button data-tool="lasso">
               <svg
                 class="ico"
@@ -151,7 +151,7 @@
                 <path
                   d="M9 18c-4-1-6-4-5-8s6-7 11-6 7 4 5 8-7 6-11 5c-4-1-5 5 0 4 2 0 3-2 2-3"
                 /></svg
-              >Lasso</button
+              ><span data-i18n="Lasso">Lasso</span></button
             ><button data-tool="circle">
               <svg
                 class="ico"
@@ -164,7 +164,7 @@
                 stroke-linejoin="round"
               >
                 <circle cx="12" cy="12" r="8" /></svg
-              >Circle</button
+              ><span data-i18n="Circle">Circle</span></button
             ><button data-tool="rect">
               <svg
                 class="ico"
@@ -177,12 +177,12 @@
                 stroke-linejoin="round"
               >
                 <rect x="3" y="5" width="18" height="14" rx="1" /></svg
-              >Rectangle
+              ><span data-i18n="Rectangle">Rectangle</span>
             </button>
           </div>
           <div id="brush-settings">
             <label for="diameter"
-              >Diameter <output id="size-label">48 px</output></label
+              ><span data-i18n="Diameter">Diameter</span> <output id="size-label">48 px</output></label
             ><input
               id="diameter"
               type="range"
@@ -190,27 +190,27 @@
               max="360"
               value="48"
             /><label for="softness"
-              >Softness <output id="soft-label">35%</output></label
+              ><span data-i18n="Softness">Softness</span> <output id="soft-label">35%</output></label
             ><input id="softness" type="range" min="0" max="100" value="35" />
           </div>
         </fieldset>
         <fieldset>
-          <legend>Backdrop</legend>
+          <legend data-i18n="Backdrop">Backdrop</legend>
           <div class="swatches">
-            <button
+            <button data-i18n-aria-label="Checkerboard" data-i18n-title="Checkerboard"
               class="check"
               data-bg="check"
               aria-label="Checkerboard"
               title="Checkerboard"
               aria-pressed="true"
             ></button
-            ><button
+            ><button data-i18n-aria-label="White" data-i18n-title="White"
               class="white"
               data-bg="white"
               aria-label="White"
               title="White"
             ></button
-            ><button
+            ><button data-i18n-aria-label="Black" data-i18n-title="Black"
               class="black"
               data-bg="black"
               aria-label="Black"
@@ -219,16 +219,16 @@
           </div>
         </fieldset>
         <fieldset>
-          <legend>Model</legend>
+          <legend data-i18n="Model">Model</legend>
           <div class="model-controls">
-            <select id="method" aria-label="Model">
-              <option value="auto">Auto</option>
-              <option value="detail">Portrait &amp; hair</option>
-              <option value="product">Object</option></select
-            ><button id="run">Apply</button>
+            <select data-i18n-aria-label="Model" id="method" aria-label="Model">
+              <option data-i18n="Auto" value="auto">Auto</option>
+              <option data-i18n="Portrait &amp; hair" value="detail">Portrait &amp; hair</option>
+              <option data-i18n="Object" value="product">Object</option></select
+            ><button data-i18n="Apply" id="run">Apply</button>
           </div>
           <p id="status" role="status"></p>
-          <progress
+          <progress data-i18n-aria-label="Processing progress"
             id="progress"
             hidden
             aria-label="Processing progress"
@@ -247,12 +247,13 @@
           >
             <path d="M8 5H5v16h14V5h-3" />
             <rect x="8" y="2" width="8" height="5" rx="1" /></svg
-          >Paste image
+          ><span data-i18n="Paste image">Paste image</span>
         </button>
+        <button data-i18n="Delete saved draft" class="text-btn" id="forget">Delete saved draft</button>
       </aside>
     </main>
     <p id="message" role="status"></p>
     <input id="file" type="file" accept="image/*" hidden />
-    <script type="module" src="../js/editor.js?v=2"></script>
+    <script type="module" src="../js/editor.js"></script>
   </body>
 </html>

@@ -2,6 +2,9 @@
 from hashlib import sha256
 from html.parser import HTMLParser
 from pathlib import Path
+import argparse
+import re
+from shutil import copytree
 from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parent / "site"
@@ -33,11 +36,34 @@ class Links(HTMLParser):
             if not target.is_file():
                 raise FileNotFoundError(target)
 
+def package(destination):
+    sources = sorted([*ROOT.rglob("*.html"), *ROOT.glob("js/*.js"), ROOT / "style.css"])
+    digest = sha256()
+    for source in [*sources, *sorted((ROOT / "assets").glob("*"))]:
+        digest.update(source.relative_to(ROOT).as_posix().encode())
+        digest.update(source.read_bytes())
+    version = digest.hexdigest()[:16]
+    copytree(ROOT, destination)
+    # Keep stable paths for bookmarks, draft storage and older cached pages.
+    # Stamp entry points and transitive imports, including the worker URL.
+    reference = re.compile(r'(["\'])([^"\'\s]+\.(?:js|css|webp|svg|woff2))\1')
+    for source in sources:
+        output = destination / source.relative_to(ROOT)
+        text = reference.sub(lambda m: f'{m[1]}{m[2]}?v={version}{m[1]}', source.read_text(encoding="utf-8"))
+        output.write_text(text, encoding="utf-8")
+    return destination
+
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--release", type=Path)
+    args = parser.parse_args()
+    root = package(args.release) if args.release else ROOT
     for name, expected in HASHES.items():
-        if sha256((ROOT / "vendor" / name).read_bytes()).hexdigest() != expected:
+        if sha256((root / "vendor" / name).read_bytes()).hexdigest() != expected:
             raise ValueError(f"Checksum mismatch: {name}")
-    for page in ROOT.rglob("*.html"):
+        if name.endswith((".onnx", ".wasm")) and expected not in (root / "js/inference.js").read_text(encoding="utf-8"):
+            raise ValueError(f"Missing client checksum: {name}")
+    for page in root.rglob("*.html"):
         Links(page).feed(page.read_text(encoding="utf-8-sig"))
     print("Static links and five inference assets verified.")
 

@@ -13,6 +13,8 @@ Remove a photo background in your browser, touch up the edges, and save a transp
 
 The interface is available in English and Russian. If Auto misses part of the subject, try **Portrait & hair** (MODNet) or **Object** (U²-Netp), then click **Apply**. Manual editing also works if a model fails to load.
 
+Use two fingers to zoom or pan on a touchscreen. The editor accepts up to 16 megapixels (16,777,216 pixels), with a maximum side of 8,192 pixels. **Delete saved draft** removes this tab’s saved photo and edits while keeping the editor open. On the next visit, the app removes inactive drafts older than seven days.
+
 ## Run locally
 
 Run this command from the project root with Python 3, then open [localhost:8000](http://127.0.0.1:8000/).
@@ -26,7 +28,7 @@ python serve.py
 The `site/` directory contains the complete static app, including the models. It requires no build step.
 
 1. In a public fork or copy of this repository, go to **Settings → Pages** and select **GitHub Actions** as the source.
-2. Push to `main`, or run **Actions → Publish delete.bg → Run workflow**. The workflow verifies the assets and publishes `site/`.
+2. Push to `main`, or run **Actions → Publish delete.bg → Run workflow**. The workflow versions the asset URLs, verifies the model files, tests the release in headless Chrome and publishes it.
 
 ## Examples
 

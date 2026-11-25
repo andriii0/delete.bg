@@ -2,6 +2,10 @@
 // transition band. Strong texture or indistinguishable colours favour the prior.
 export function refineEdges(alpha, rgb, width, height) {
   const out = alpha.slice();
+  // Sparse triples hold pixel index, source RGB and estimated foreground RGB.
+  const chunks = [];
+  let chunk = new Uint32Array(3072),
+    used = 0;
   const directions = [
     [-1, 0],
     [1, 0],
@@ -27,7 +31,8 @@ export function refineEdges(alpha, rgb, width, height) {
       fb = 0,
       bw = 0,
       fw = 0,
-      b2 = 0;
+      b2 = 0,
+      f2 = 0;
     for (const r of radii)
       for (const [dx, dy] of directions) {
         const xx = x + dx * r,
@@ -51,17 +56,23 @@ export function refineEdges(alpha, rgb, width, height) {
           fg += w * green;
           fb += w * blue;
           fw += w;
+          f2 += w * (red * red + green * green + blue * blue);
         }
       }
     if (!bw || !fw) continue;
     br /= bw;
     bg /= bw;
     bb /= bw;
-    const dr = fr / fw - br,
-      dg = fg / fw - bg,
-      db = fb / fw - bb;
+    fr /= fw;
+    fg /= fw;
+    fb /= fw;
+    const dr = fr - br,
+      dg = fg - bg,
+      db = fb - bb;
     const signal = dr * dr + dg * dg + db * db;
-    const variance = Math.max(0, b2 / bw - br * br - bg * bg - bb * bb);
+    const variance =
+      Math.max(0, b2 / bw - br * br - bg * bg - bb * bb) +
+      Math.max(0, f2 / fw - fr * fr - fg * fg - fb * fb);
     if (signal < 65) continue;
     const p = i * 4,
       cr = rgb[p] - br,
@@ -77,6 +88,26 @@ export function refineEdges(alpha, rgb, width, height) {
     out[i] =
       255 *
       (prior + 0.72 * trust * Math.max(-0.48, Math.min(0.48, fit - prior)));
+    if (!out[i] || out[i] === 255 || rgb[p + 3] !== 255) continue;
+    const channel = (source, estimate) =>
+      Math.round(source + trust * (estimate - source));
+    const source = rgb[p] | (rgb[p + 1] << 8) | (rgb[p + 2] << 16);
+    const target =
+      channel(rgb[p], fr) |
+      (channel(rgb[p + 1], fg) << 8) |
+      (channel(rgb[p + 2], fb) << 16);
+    if (target === source) continue;
+    if (used === chunk.length) {
+      chunks.push(chunk);
+      chunk = new Uint32Array(chunk.length);
+      used = 0;
+    }
+    chunk[used++] = i;
+    chunk[used++] = source;
+    chunk[used++] = target;
   }
-  return out;
+  const colors = new Uint32Array(chunks.length * chunk.length + used);
+  chunks.forEach((part, i) => colors.set(part, i * chunk.length));
+  colors.set(chunk.subarray(0, used), chunks.length * chunk.length);
+  return { alpha: out, colors };
 }

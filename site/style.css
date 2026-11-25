@@ -1,6 +1,6 @@
 @font-face {
   font-family: Bricolage;
-  src: url(assets/bricolage.woff2) format("woff2");
+  src: url("assets/bricolage.woff2") format("woff2");
   font-weight: 200 800;
   font-display: swap;
 }
@@ -107,7 +107,7 @@ a:focus-visible {
 .brandmark {
   width: 28px;
   height: 28px;
-  background: url(assets/icon.svg) center/contain no-repeat;
+  background: url("assets/icon.svg") center/contain no-repeat;
 }
 .suffix,
 .period {
@@ -424,7 +424,7 @@ button.text-btn {
 #viewport.edit {
   cursor: crosshair;
 }
-#viewport.brush {
+#viewport.brush #stage {
   cursor: none;
 }
 #stage {

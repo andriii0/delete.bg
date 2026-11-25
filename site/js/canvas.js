@@ -2,9 +2,10 @@ import { $ } from "./input.js";
 import { shape } from "./pixels.js";
 
 export class CanvasView {
-  constructor(onStart, onCommit) {
+  constructor(onStart, onCommit, resumeProcessing) {
     this.onStart = onStart;
     this.onCommit = onCommit;
+    this.resumeProcessing = resumeProcessing;
     this.viewport = $("viewport");
     this.stage = $("stage");
     this.mode = "pan";
@@ -16,10 +17,17 @@ export class CanvasView {
     this.x = 0;
     this.y = 0;
     const v = this.viewport;
+    this.touches = new Map();
+    v.onpointerleave = () => {
+      this.overPhoto = false;
+      this.overlay();
+    };
     v.onpointerdown = (e) => this.down(e);
     v.onpointermove = (e) => this.move(e);
     v.onpointerup = (e) => this.up(e);
     v.onpointercancel = v.onlostpointercapture = (e) => {
+      this.touches.delete(e.pointerId);
+      if (!this.touches.size) this.pinching = false;
       if (this.gesture?.id === e.pointerId) this.cancel();
     };
     v.addEventListener(
@@ -52,7 +60,9 @@ export class CanvasView {
     document.addEventListener("keydown", (e) => {
       if (
         e.code === "Space" &&
-        !["INPUT", "BUTTON", "SELECT"].includes(e.target.tagName)
+        (e.target === v ||
+          (v.matches(":hover") &&
+            !["INPUT", "SELECT", "TEXTAREA"].includes(e.target.tagName)))
       ) {
         e.preventDefault();
         this.space = true;
@@ -96,11 +106,16 @@ export class CanvasView {
     $("diameter").oninput = $("softness").oninput = () => {
       this.render();
     };
+    for (const event of ["pointerenter", "focus", "pointerleave", "blur"])
+      $("diameter").addEventListener(event, () => this.overlay());
   }
   attach(pixels) {
     this.cancel();
     this.pixels = pixels;
     this.last = null;
+    this.overPhoto = false;
+    this.touches.clear();
+    this.pinching = false;
     this.mode = "pan";
     this.view = "result";
     this.zoom = "fit";
@@ -209,7 +224,13 @@ export class CanvasView {
       ctx = outline.getContext("2d");
     ctx.clearRect(0, 0, outline.width, outline.height);
     const editing = this.mode !== "pan" && this.view === "result";
-    ring.hidden = !(editing && this.tool === "brush");
+    const preview = $("diameter").matches(":hover, :focus");
+    ring.hidden = !(
+      editing &&
+      this.tool === "brush" &&
+      !this.pinching &&
+      (this.overPhoto || preview)
+    );
     if (!ring.hidden) {
       const centre = (origin, length, limit) =>
         (Math.max(0, origin) + Math.min(limit, origin + length * this.scale)) /
@@ -244,15 +265,29 @@ export class CanvasView {
     }
   }
   down(e) {
-    if (!this.pixels || this.gesture || ![0, 1].includes(e.button)) return;
+    if (!this.pixels || ![0, 1].includes(e.button)) return;
+    if (e.pointerType === "touch") {
+      this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      this.viewport.setPointerCapture(e.pointerId);
+      if (this.touches.size > 1) {
+        const interrupted = this.gesture?.interrupted;
+        this.cancel();
+        this.pinching = true;
+        this.pinch = this.pinchGeometry();
+        this.overlay();
+        if (interrupted) this.resumeProcessing();
+        return;
+      }
+    }
+    if (this.gesture || this.pinching) return;
     const p = this.point(e);
     const pan =
       e.button === 1 ||
       this.space ||
       this.mode === "pan" ||
       this.view === "original";
-    if (!pan && !this.inside(p)) return;
     e.preventDefault();
+    this.viewport.focus({ preventScroll: true });
     this.viewport.setPointerCapture(e.pointerId);
     const type = pan ? "pan" : this.tool === "brush" ? "brush" : "shape";
     this.gesture = {
@@ -262,13 +297,19 @@ export class CanvasView {
       cx: e.clientX,
       cy: e.clientY,
     };
-    if (!pan) {
-      this.onStart();
-      this.pixels.begin();
-      if (type === "brush") this.last = p;
-      if (type === "brush") this.stroke(p, p);
-    }
+    if (!pan && e.pointerType !== "touch") this.startEdit();
     this.overlay();
+  }
+  startEdit() {
+    const g = this.gesture;
+    g.interrupted = this.onStart();
+    g.started = true;
+    this.pixels.begin();
+    if (g.type === "brush") {
+      const p = g.points[0];
+      if (this.inside(p)) this.last = p;
+      this.stroke(p, p);
+    }
   }
   stroke(a, b) {
     this.pixels.brush(
@@ -279,11 +320,41 @@ export class CanvasView {
       this.mode === "restore",
     );
   }
+  pinchGeometry() {
+    const [a, b] = this.touches.values();
+    const rect = this.viewport.getBoundingClientRect();
+    return {
+      x: (a.x + b.x) / 2 - rect.left,
+      y: (a.y + b.y) / 2 - rect.top,
+      span: Math.max(1, Math.hypot(a.x - b.x, a.y - b.y)),
+    };
+  }
   move(e) {
     if (!this.pixels) return;
+    if (this.touches.has(e.pointerId))
+      this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (this.pinching) {
+      if (this.touches.size !== 2) return;
+      const next = this.pinchGeometry(),
+        previous = this.pinch,
+        fit = this.fitScale();
+      const scale = Math.max(
+        Math.min(0.05, fit),
+        Math.min(Math.max(8, fit), (this.scale * next.span) / previous.span),
+      );
+      this.x = next.x - ((previous.x - this.x) * scale) / this.scale;
+      this.y = next.y - ((previous.y - this.y) * scale) / this.scale;
+      this.scale = scale;
+      this.zoom = String(scale);
+      this.pinch = next;
+      this.position();
+      this.render();
+      return;
+    }
     const g = this.gesture,
       p = this.point(e);
     if (g && g.id !== e.pointerId) return;
+    this.overPhoto = this.inside(p);
     if (g?.type === "pan") {
       this.x += e.clientX - g.cx;
       this.y += e.clientY - g.cy;
@@ -291,6 +362,10 @@ export class CanvasView {
       g.cy = e.clientY;
       this.position();
       return;
+    }
+    if (g && !g.started) {
+      if (Math.hypot(e.clientX - g.cx, e.clientY - g.cy) < 3) return;
+      this.startEdit();
     }
     if (
       this.tool === "brush" &&
@@ -310,17 +385,28 @@ export class CanvasView {
     this.overlay();
   }
   up(e) {
+    this.touches.delete(e.pointerId);
+    if (this.pinching) {
+      if (!this.touches.size) this.pinching = false;
+      else if (this.touches.size === 2) this.pinch = this.pinchGeometry();
+      this.overlay();
+      return;
+    }
     const g = this.gesture;
     if (!g || g.id !== e.pointerId) return;
+    if (g.type !== "pan" && !g.started) this.startEdit();
     this.move(e);
     if (g.type === "shape")
       this.pixels.fill(this.tool, g.points, this.mode === "restore");
     this.gesture = null;
-    if (g.type !== "pan" && this.pixels.finish()) this.onCommit();
+    if (g.type !== "pan") {
+      const edit = this.pixels.finish();
+      if (edit) this.onCommit(edit);
+    }
     this.overlay();
   }
   cancel() {
-    if (this.gesture && this.gesture.type !== "pan") this.pixels.finish(true);
+    if (this.gesture?.started) this.pixels.finish(true);
     this.gesture = null;
     this.overlay();
   }
