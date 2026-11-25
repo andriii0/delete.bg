@@ -1,52 +1,39 @@
 # delete.bg
 
-[Open the app](https://andriii0.github.io/delete.bg/) · [Open the editor](https://andriii0.github.io/delete.bg/editor/)
+Remove a photo background in your browser, touch up the edges, and save a transparent PNG at the original resolution. Photos stay on your device. Processing runs on the CPU and works in Chrome and Edge on Windows with hardware acceleration turned off.
 
-A free, browser-based photo cutout editor. It runs on a CPU in Chrome and Edge on Windows. The static site and its inference assets are self-contained. Photos stay in the browser.
+[Open the app](https://andriii0.github.io/delete.bg/)
 
-## Local use
+## Edit a photo
 
-From the directory containing this README, run the following with Python 3.
+1. Drop a photo onto the page, click to choose a file, or paste with **Ctrl+V**. Processing starts automatically. The browser downloads the models on first use and caches them for later.
+2. Switch between **Original** and **Cutout** to inspect the same detail. Scroll to zoom around the pointer and drag with **Pan** to move. White and black backgrounds help reveal fringes around hair.
+3. Use **Erase** or **Restore** with the brush, lasso, circle, or rectangle. Restore shows a faint copy of the original to guide you. Undo with **Ctrl+Z** and redo with **Ctrl+Shift+Z** or **Ctrl+Y**.
+4. Use **Copy PNG** (**Ctrl+C**) or **Download PNG** to export. Both preserve transparency and exclude the preview background.
+
+The interface is available in English and Russian. If Auto misses part of the subject, try **Portrait & hair** (MODNet) or **Object** (U²-Netp), then click **Apply**. Manual editing also works if a model fails to load.
+
+## Run locally
+
+Run this command from the project root with Python 3, then open [localhost:8000](http://127.0.0.1:8000/).
 
 ```console
 python serve.py
 ```
 
-Open [the landing page](http://127.0.0.1:8000/) or [the editor](http://127.0.0.1:8000/editor/). On Windows, `py serve.py` also works. The server binds to loopback and supplies the correct JavaScript module and WebAssembly MIME types. The shipped `site/` directory is the production build. It needs no install or compilation.
-
 ## Publish to GitHub Pages
 
-1. Create a **public** GitHub repository with `main` as its default branch. Place the contents of this project at the repository root, including the hidden `.github` directory. The workflow and `site` should be siblings of this README.
-2. In **Settings → Pages → Build and deployment → Source**, select **GitHub Actions**.
-3. Push to `main`, or choose **Actions → Publish delete.bg → Run workflow**. The workflow runs `python verify.py` to verify the five inference assets and HTML links, then publishes `site/`. The deployment summary contains the public URL.
-4. Open `https://USERNAME.github.io/REPOSITORY/` and `https://USERNAME.github.io/REPOSITORY/editor/`. Both routes have their own index file. All runtime URLs resolve inside the project directory.
+The `site/` directory contains the complete static app, including the models. It requires no build step.
 
-The published site occupies about **42.2 MB**, below the 1 GB site limit. The largest file is 25.9 MB. A cold visit that uses both models requires about 41.7 MB of inference assets before HTTP compression. At that transfer size, 2,300 fully cold sessions use about 96 GB. Actual traffic includes page assets and depends on caching, compression and repeat use. The examples directory stays outside the published site. [GitHub Pages limits](https://docs.github.com/en/pages/getting-started-with-github-pages/github-pages-limits) · [Pages deployment workflow](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)
+1. In a public fork or copy of this repository, go to **Settings → Pages** and select **GitHub Actions** as the source.
+2. Push to `main`, or run **Actions → Publish delete.bg → Run workflow**. The workflow verifies the assets and publishes `site/`.
 
-## Edit and export
+## Examples
 
-Click anywhere in the upload area, drop a file, or press Ctrl+V. The editor opens the photo and starts processing. The landing page downloads only its UI and a draggable original/cutout preview.
+These are full-resolution exports from **Auto** without manual edits. Click a cutout to open its transparent PNG. For enlarged edge comparisons on white and black backgrounds, see the [CPU benchmarks and comparison sheets](examples/README.md).
 
-Choose **EN / RU** in the header to switch languages. The browser remembers the choice. Scroll over the photo to zoom around the pointer.
-
-Use **Original / Cutout** to compare at the same zoom and position. **Pan** pans by dragging. The middle mouse button or Space-drag also pans while editing. The checkerboard, white and black swatches change the preview background.
-
-**Erase** edits transparency. **Restore** restores the source pixels and shows a 25% original underneath. Drag the brush for a stroke, outline a freehand selection with the lasso, drag a circle from its centre, or drag between opposite rectangle corners. Release to apply the shape. Escape cancels an unfinished gesture and exits manual editing. Diameter is in source pixels. The preview ring follows that diameter at every zoom.
-
-Each gesture and each automatic result is one undo step. Ctrl+Z undoes and Ctrl+Shift+Z or Ctrl+Y redoes. A new edit clears redo. Starting a manual gesture cancels a pending automatic pass. **Apply** runs the selected model again. The undo buffer retains up to 96 MiB of recent alpha changes, with room for at least the latest edit.
-
-**Copy PNG** (Ctrl+C) and **Download PNG** encode the result canvas at source resolution, including alpha. Preview layers have separate canvases or CSS backgrounds. Clipboard operations require HTTPS or localhost and the browser's clipboard permission. Native Ctrl+V and the file chooser also accept images when clipboard reading by a button is denied.
-
-The current tab keeps its source photo and latest alpha mask in local IndexedDB for refresh. Undo history lives in memory. Opening another photo replaces that tab's draft. Saving a new photo also removes draft entries older than seven days. Clearing the site's browser data removes drafts and model caches.
-
-## Inference
-
-The worker uses ONNX Runtime Web 1.22.0 with a single WebAssembly SIMD thread. This path works with browser hardware acceleration disabled and ordinary GitHub Pages headers. The worker reports model and WebAssembly downloads separately and stores both in Cache Storage when available.
-
-**Portrait & hair** uses MODNet with a 1,024-pixel long side. **Object** uses U²-Netp at 320 × 320. Each predicts an initial mask. In its uncertain band, the worker estimates transparency using nearby foreground and background colours at source resolution. It limits the correction in textured regions and where the colours are too similar. Source alpha bounds the final opacity. The RGB channels retain the source colours, so colour spill and ambiguous fine edges may remain.
-
-**Auto** starts with the portrait model. If fewer than 12% of bottom-row pixels have alpha above 220, it runs the general model for an isolated subject. This framing heuristic can misclassify a full-body portrait or an object that spans the bottom edge. Either model can be selected explicitly. A failed model download leaves the original available to every manual tool.
-
-[CPU comparison, timings, crops and exports](examples/README.md) · [Model and photo credits](site/licenses/index.html)
-
-
+| Photo | Original | Cutout |
+| --- | --- | --- |
+| Dark locs against a dark background | ![Portrait with dark locs](examples/locks.jpg) | [![Cutout of the portrait with dark locs](examples/locks-export.png)](examples/locks-export.png) |
+| Windswept hair | ![Portrait with fine strands blowing in the wind](examples/wisps.jpg) | [![Cutout of the windswept portrait](examples/wisps-export.png)](examples/wisps-export.png) |
+| Pink gerbera | ![Pink gerbera on its stem](examples/flower.jpg) | [![Cutout of the gerbera and stem](examples/flower-export.png)](examples/flower-export.png) |
