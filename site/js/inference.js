@@ -95,7 +95,7 @@ function context(width, height) {
   return ctx;
 }
 
-export async function infer(image, kind, report = () => {}) {
+export async function infer(image, kind, report = () => {}, guide) {
   const portrait = kind !== "object" && kind !== "product";
   const model = models[portrait ? "portrait" : "object"];
   const bytes = await assetBytes(
@@ -129,6 +129,22 @@ export async function infer(image, kind, report = () => {}) {
     const small = context(width, height);
     small.drawImage(image, 0, 0, width, height);
     const frame = small.getImageData(0, 0, width, height);
+    if (guide) {
+      // Suppress likely background in the network input only. Upsampling and
+      // foreground colour recovery below still use the untouched source.
+      for (let y = 0; y < height; y++) {
+        const row =
+          Math.floor(((y + 0.5) * image.height) / height) * image.width;
+        for (let x = 0; x < width; x++) {
+          const hint =
+            guide[row + Math.floor(((x + 0.5) * image.width) / width)];
+          const keep = Math.min(1, hint / 64);
+          const i = (y * width + x) * 4;
+          for (let c = 0; c < 3; c++)
+            frame.data[i + c] = keep * frame.data[i + c] + (1 - keep) * 170;
+        }
+      }
+    }
     const area = width * height;
     const rgb = new Float32Array(area * 3);
     let peak = 1;

@@ -28,7 +28,7 @@ export function portraitCandidate(alpha, width, height) {
   return fill < 0.88 && lowerWidth > widest * 0.12;
 }
 
-export function sameSubject(a, b) {
+export function compareMasks(a, b) {
   let first = 0,
     second = 0,
     common = 0;
@@ -39,9 +39,30 @@ export function sameSubject(a, b) {
     second += y;
     common += x && y;
   }
-  if (!first) return second > 0;
-  return (
-    common >= Math.min(first, second) * 0.6 &&
-    common >= Math.max(first, second) * 0.32
-  );
+  const sameSubject = first
+    ? common > 0 &&
+      common >= Math.min(first, second) * 0.6 &&
+      common >= Math.max(first, second) * 0.32
+    : second > 0;
+  // One-sided disagreement is common when only the portrait model finds fine hair.
+  const disputed =
+    common > 0 && common < first * 0.92 && common < second * 0.92;
+  return {
+    sameSubject,
+    disputed,
+    iou: common / (first + second - common || 1),
+  };
+}
+
+export function limitUnsupportedAlpha(guided, general, portrait) {
+  for (let i = 0; i < guided.length; i++) {
+    // Suppress new opaque patches in the backdrop while preserving shared soft edges.
+    const support = Math.max(general[i], portrait[i]);
+    const t = Math.max(0, Math.min(1, (support - 105) / 55));
+    const limit = Math.max(
+      Math.min(general[i], portrait[i]),
+      255 * t * t * (3 - 2 * t),
+    );
+    guided[i] = Math.min(guided[i], limit);
+  }
 }

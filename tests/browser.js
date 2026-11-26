@@ -1,5 +1,9 @@
 import { Pixels } from "../site/js/pixels.js";
-import { portraitCandidate, sameSubject } from "../site/js/selection.js";
+import {
+  portraitCandidate,
+  compareMasks,
+  limitUnsupportedAlpha,
+} from "../site/js/selection.js";
 import { refineEdges } from "../site/js/matting.js";
 
 const passed = [];
@@ -71,8 +75,33 @@ function pixelTests() {
     "Solid object touching bottom uses general segmentation",
   );
   assert(
-    !sameSubject(box, new Uint8Array(box.length)),
+    !compareMasks(box, new Uint8Array(box.length)).sameSubject,
     "Empty portrait proposal cannot replace a valid general mask",
+  );
+  const shiftedBox = box.slice();
+  for (let y = 28; y < 60; y++) {
+    shiftedBox.fill(0, y * width + 4, y * width + 14);
+    shiftedBox.fill(255, y * width + 55, y * width + 60);
+  }
+  assert(
+    compareMasks(box, shiftedBox).disputed,
+    "Missing and extra foreground trigger a guided comparison",
+  );
+  assert(
+    !compareMasks(box, box).disputed,
+    "Matching masks skip the extra portrait pass",
+  );
+  const partialBox = box.slice();
+  partialBox.fill(0, 0, width * 43);
+  assert(
+    !compareMasks(box, partialBox).disputed,
+    "One-sided differences skip the extra portrait pass",
+  );
+  const guided = Uint8ClampedArray.of(230, 255, 205, 0);
+  limitUnsupportedAlpha(guided, [0, 40, 200, 200], [0, 45, 10, 200]);
+  assert(
+    guided.join() === "0,40,205,0",
+    "Guidance suppresses unsupported foreground and retains shared translucent edges",
   );
   const mask = new Uint8ClampedArray(45 * 5),
     rgb = new Uint8ClampedArray(mask.length * 4);
